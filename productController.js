@@ -798,6 +798,9 @@
 // }
 
 // module.exports = ProductController;const bcrypt = require("bcryptjs");
+
+
+
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const connectDB = require("./db");
@@ -806,17 +809,13 @@ const User = require("./userSchema");
 
 class ProductController {
 
-  /* ================= AUTH ================= */
+  /* ========== AUTH ========== */
 
   static async register(req, res) {
     try {
       await connectDB();
 
       const { name, email, password, phone, address } = req.body;
-
-      if (!process.env.JWT_SECRET) {
-        throw new Error("JWT_SECRET missing");
-      }
 
       const exists = await User.findOne({ email });
       if (exists) {
@@ -842,17 +841,10 @@ class ProductController {
       res.status(201).json({
         success: true,
         token,
-        user: {
-          _id: user._id,
-          name: user.name,
-          email: user.email,
-          phone: user.phone,
-          address: user.address,
-        },
+        user,
       });
 
     } catch (err) {
-      console.error("REGISTER ERROR:", err);
       res.status(500).json({ success: false, message: err.message });
     }
   }
@@ -862,10 +854,6 @@ class ProductController {
       await connectDB();
 
       const { email, password } = req.body;
-
-      if (!process.env.JWT_SECRET) {
-        throw new Error("JWT_SECRET missing");
-      }
 
       const user = await User.findOne({ email });
       if (!user) {
@@ -883,41 +871,25 @@ class ProductController {
         { expiresIn: "7d" }
       );
 
-      res.json({
-        success: true,
-        token,
-        user: {
-          _id: user._id,
-          name: user.name,
-          email: user.email,
-          phone: user.phone,
-          address: user.address,
-        },
-      });
+      res.json({ success: true, token, user });
 
     } catch (err) {
-      console.error("LOGIN ERROR:", err);
       res.status(500).json({ success: false, message: err.message });
     }
   }
 
-  /* ================= PRODUCTS ================= */
+  /* ========== PRODUCTS ========== */
 
   static async getAll(req, res) {
     try {
       await connectDB();
 
-      const type = req.params.type?.trim().toLowerCase();
+      const type = req.params.type.toLowerCase();
       const data = await ProductService.getAll(type);
 
-      res.json({
-        success: true,
-        count: data.length,
-        data,
-      });
+      res.json({ success: true, data });
 
     } catch (err) {
-      console.error("GET PRODUCTS ERROR:", err);
       res.status(500).json({ success: false, message: err.message });
     }
   }
@@ -962,7 +934,7 @@ class ProductController {
     }
   }
 
-  /* ================= ORDERS ================= */
+  /* ========== ORDERS ========== */
 
   static async createOrder(req, res) {
     try {

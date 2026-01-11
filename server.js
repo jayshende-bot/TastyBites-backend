@@ -47,6 +47,7 @@
 // 
 
 
+
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
@@ -55,7 +56,6 @@ const connectDB = require("./db");
 const productRoutes = require("./productroutes");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 /* ================= MIDDLEWARE ================= */
 app.use(
@@ -69,20 +69,40 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-/* ================= DB ================= */
+/* ================= DATABASE ================= */
+/**
+ * IMPORTANT:
+ * On Vercel, the function may run multiple times.
+ * Your connectDB() must internally handle
+ * "already connected" state (mongoose cached connection).
+ */
 connectDB();
 
 /* ================= ROUTES ================= */
 app.get("/", (req, res) => {
-  res.json({ success: true, message: "API running 🚀" });
+  res.status(200).json({
+    success: true,
+    message: "TastyBites API running 🚀",
+  });
 });
 
-app.use("/api/v1/products", productRoutes);
+/**
+ * API prefix
+ * Example:
+ * /api/v1/veg
+ * /api/v1/nonveg
+ */
+app.use("/api/v1", productRoutes);
 
-/* ================= START SERVER ================= */
-if (require.main === module) {
+/* ================= LOCAL DEV ONLY ================= */
+/**
+ * Vercel DOES NOT allow app.listen()
+ * So we start server ONLY when running locally
+ */
+if (process.env.NODE_ENV !== "production") {
+  const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`🚀 Server running locally on port ${PORT}`);
   });
 }
 

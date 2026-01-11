@@ -43,34 +43,32 @@
 // router.delete("/:type/:id", ProductController.deleteOne);
 // router.delete("/:type", 
 // 
-
-
 const express = require("express");
 const router = express.Router();
 
-const ProductController = require("./ProductController");
+const productController = require("./productController");
 const authMiddleware = require("./authentication");
 
-/* ================= PUBLIC AUTH ================= */
+/* ========== AUTH (PUBLIC) ========== */
 router.post("/register", ProductController.register);
 router.post("/login", ProductController.login);
 
-/* ================= PUBLIC PRODUCTS ================= */
-router.get("/:type", ProductController.getAll);
+/* ========== PRODUCTS (PUBLIC) ========== */
+router.get("/products/:type", ProductController.getAll);
 
-/* ================= PROTECTED ROUTES ================= */
+/* ========== PROTECTED ROUTES ========== */
 router.use(authMiddleware);
 
-/* ================= ORDERS ================= */
+/* ========== ORDERS ========== */
 router.post("/orders", ProductController.createOrder);
 router.get("/orders", ProductController.getAllOrders);
 router.get("/orders/user/:email", ProductController.getUserOrders);
 router.delete("/orders", ProductController.deleteAllOrders);
 
-/* ================= ADMIN PRODUCTS ================= */
-router.post("/:type", ProductController.saveOne);
-router.post("/:type/bulk", ProductController.saveAll);
-router.delete("/:type/:id", ProductController.deleteOne);
-router.delete("/:type", ProductController.deleteAll);
+/* ========== ADMIN PRODUCTS ========== */
+router.post("/products/:type", ProductController.saveOne);
+router.post("/products/:type/bulk", ProductController.saveAll);
+router.delete("/products/:type/:id", ProductController.deleteOne);
+router.delete("/products/:type", ProductController.deleteAll);
 
 module.exports = router;
