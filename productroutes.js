@@ -42,10 +42,10 @@
 // router.post("/:type/bulk", ProductController.saveAll);
 // router.delete("/:type/:id", ProductController.deleteOne);
 // router.delete("/:type", 
-// 
-const express = require("express");
+// const express = require("express");
 const router = express.Router();
 
+/* ✅ IMPORT NAME MATCHES USAGE */
 const productController = require("./productController");
 const authMiddleware = require("./authentication");
 
