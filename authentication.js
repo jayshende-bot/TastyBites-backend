@@ -58,12 +58,13 @@ const authMiddleware = (req, res, next) => {
 
   /* ================= PUBLIC ROUTES ================= */
   const publicRoutes = [
-    "/api/v1/products/veg",
-    "/api/v1/products/nonveg",
-    "/api/v1/products/drink",
-    "/api/v1/products/register",
-    "/api/v1/products/login",
-  ];
+  "/products/veg",
+  "/products/nonveg",
+  "/products/drink",
+  "/products/register",
+  "/products/login",
+];
+
 
   if (publicRoutes.includes(req.path)) {
     return next();
