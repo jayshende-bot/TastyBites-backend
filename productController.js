@@ -811,54 +811,62 @@ const User = require("./userSchema");
 class ProductController {
 
   /* ========== AUTH ========== */
-static async register(req, res) {
-  try {
-    await connectDB();
+  
+  
+   static async register(req, res) {
+    try {
+      await connectDB();
 
-    const { name, email, password, phone, address } = req.body;
+      const { name, email, password, phone, address } = req.body;
 
-    // ✅ REQUIRED FIELD CHECK (THIS WAS MISSING)
-    if (!name || !email || !password || !phone || !address) {
-      return res.status(400).json({
+      // ✅ Trim fields and validate
+      if (
+        !name?.trim() ||
+        !email?.trim() ||
+        !password?.trim() ||
+        !phone?.trim() ||
+        !address?.trim()
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "All fields are required",
+        });
+      }
+
+      const exists = await User.findOne({ email });
+      if (exists) {
+        return res.status(400).json({ success: false, message: "Email already exists" });
+      }
+
+      const hashed = await bcrypt.hash(password, 10);
+
+      const user = await User.create({
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        password: hashed,
+        address: address.trim(),
+      });
+
+      // Remove password from response
+      const { password: pwd, ...userWithoutPassword } = user._doc;
+
+      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+
+      res.status(201).json({
+        success: true,
+        token,
+        user: userWithoutPassword,
+      });
+    } catch (err) {
+      res.status(500).json({
         success: false,
-        message: "All fields are required"
+        message: err.message,
       });
     }
-
-    const exists = await User.findOne({ email });
-    if (exists) {
-      return res.status(400).json({ message: "Email already exists" });
-    }
-
-    const hashed = await bcrypt.hash(password, 10);
-
-    const user = await User.create({
-      name,
-      email,
-      phone,
-      password: hashed,
-      address,
-    });
-
-    const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    res.status(201).json({
-      success: true,
-      token,
-      user,
-    });
-
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message
-    });
   }
-}
+
+  //   login  ////  
 
   static async login(req, res) {
     try {
