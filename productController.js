@@ -811,27 +811,22 @@ const User = require("./userSchema");
 class ProductController {
 
   /* ========== AUTH ========== */
-  
-  
-   static async register(req, res) {
+
+
+  static async register(req, res) {
     try {
       await connectDB();
 
       const { name, email, password, phone, address } = req.body;
 
       // ✅ Trim fields and validate
-      if (
-        !name?.trim() ||
-        !email?.trim() ||
-        !password?.trim() ||
-        !phone?.trim() ||
-        !address?.trim()
-      ) {
+      if (!name?.trim() || !email?.trim() || !password?.trim()) {
         return res.status(400).json({
           success: false,
-          message: "All fields are required",
+          message: "Name, email and password are required",
         });
       }
+
 
       const exists = await User.findOne({ email });
       if (exists) {
@@ -843,10 +838,11 @@ class ProductController {
       const user = await User.create({
         name: name.trim(),
         email: email.trim(),
-        phone: phone.trim(),
         password: hashed,
-        address: address.trim(),
+        phone: phone?.trim() || "",
+        address: address?.trim() || "",
       });
+
 
       // Remove password from response
       const { password: pwd, ...userWithoutPassword } = user._doc;
@@ -859,11 +855,13 @@ class ProductController {
         user: userWithoutPassword,
       });
     } catch (err) {
-      res.status(500).json({
-        success: false,
-        message: err.message,
-      });
-    }
+  console.error("REGISTER ERROR:", err);
+  res.status(500).json({
+    success: false,
+    message: "Server error",
+  });
+}
+
   }
 
   //   login  ////  
