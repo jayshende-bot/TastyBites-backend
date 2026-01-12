@@ -811,44 +811,54 @@ const User = require("./userSchema");
 class ProductController {
 
   /* ========== AUTH ========== */
+static async register(req, res) {
+  try {
+    await connectDB();
 
-  static async register(req, res) {
-    try {
-      await connectDB();
+    const { name, email, password, phone, address } = req.body;
 
-      const { name, email, password, phone, address } = req.body;
-
-      const exists = await User.findOne({ email });
-      if (exists) {
-        return res.status(400).json({ message: "Email already exists" });
-      }
-
-      const hashed = await bcrypt.hash(password, 10);
-
-      const user = await User.create({
-        name,
-        email,
-        phone,
-        password: hashed,
-        address,
+    // ✅ REQUIRED FIELD CHECK (THIS WAS MISSING)
+    if (!name || !email || !password || !phone || !address) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required"
       });
-
-      const token = jwt.sign(
-        { id: user._id },
-        process.env.JWT_SECRET,
-        { expiresIn: "7d" }
-      );
-
-      res.status(201).json({
-        success: true,
-        token,
-        user,
-      });
-
-    } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
     }
+
+    const exists = await User.findOne({ email });
+    if (exists) {
+      return res.status(400).json({ message: "Email already exists" });
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
+
+    const user = await User.create({
+      name,
+      email,
+      phone,
+      password: hashed,
+      address,
+    });
+
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.status(201).json({
+      success: true,
+      token,
+      user,
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
+}
 
   static async login(req, res) {
     try {
