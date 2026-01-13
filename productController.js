@@ -946,20 +946,36 @@ static async login(req, res) {
 }
 
   /* ========== PRODUCTS ========== */
+static async getAll(req, res) {
+  try {
+    await connectDB();
 
-  static async getAll(req, res) {
-    try {
-      await connectDB();
+    const type = (req.params.type || "").toLowerCase();
 
-      const type = req.params.type.toLowerCase();
-      const data = await ProductService.getAll(type);
-
-      res.json({ success: true, data });
-
-    } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
+    if (!type) {
+      return res.status(400).json({
+        success: false,
+        message: "Product type is required",
+      });
     }
+
+    const data = await ProductService.getAll(type);
+
+    return res.json({
+      success: true,
+      data,
+    });
+
+  } catch (err) {
+    console.error("GET PRODUCTS ERROR:", err.message);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
+}
+
 
   static async saveOne(req, res) {
     try {
@@ -1030,40 +1046,6 @@ static async createOrder(req, res) {
     });
   }
 }
-
-
-static async getAll(req, res) {
-  try {
-    await connectDB();
-
-    const type = (req.params.type || "").toLowerCase();
-
-    if (!type) {
-      return res.status(400).json({
-        success: false,
-        message: "Product type is required",
-      });
-    }
-
-    const data = await ProductService.getAll(type);
-
-    return res.json({
-      success: true,
-      data,
-    });
-
-  } catch (err) {
-    console.error("GET PRODUCTS ERROR:", err.message);
-
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
-  }
-}
-
-
-
 
 
 static async getUserOrders(req, res) {
