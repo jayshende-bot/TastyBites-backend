@@ -812,88 +812,7 @@ class ProductController {
 
   /* ========== AUTH ========== */
 
-
-  static async register(req, res) {
-    try {
-      await connectDB();
-
-      const { name, email, password, phone, address } = req.body;
-
-      // ✅ Trim fields and validate
-      if (!name?.trim() || !email?.trim() || !password?.trim()) {
-        return res.status(400).json({
-          success: false,
-          message: "Name, email and password are required",
-        });
-      }
-
-
-      const exists = await User.findOne({ email });
-      if (exists) {
-        return res.status(400).json({ success: false, message: "Email already exists" });
-      }
-
-      const hashed = await bcrypt.hash(password, 10);
-
-      const user = await User.create({
-        name: name.trim(),
-        email: email.trim(),
-        password: hashed,
-        phone: phone?.trim() || "",
-        address: address?.trim() || "",
-      });
-
-
-      // Remove password from response
-      const { password: pwd, ...userWithoutPassword } = user._doc;
-
-      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-
-      res.status(201).json({
-        success: true,
-        token,
-        user: userWithoutPassword,
-      });
-    } catch (err) {
-  console.error("REGISTER ERROR:", err);
-  res.status(500).json({
-    success: false,
-    message: "Server error",
-  });
-}
-
-  }
-
-  //   login  ////  
-
-  static async login(req, res) {
-    try {
-      await connectDB();
-
-      const { email, password } = req.body;
-
-      const user = await User.findOne({ email });
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      const match = await bcrypt.compare(password, user.password);
-      if (!match) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      const token = jwt.sign(
-        { id: user._id },
-        process.env.JWT_SECRET,
-        { expiresIn: "7d" }
-      );
-
-      res.json({ success: true, token, user });
-
-    } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
-    }
-  }
+static async register(req, res) { try { await connectDB(); const { name, email, password, phone, address } = req.body; if (!name?.trim() || !email?.trim() || !password?.trim()) { return res.status(400).json({ success: false, message: "Name, email and password are required", }); } const exists = await User.findOne({ email }); if (exists) { return res.status(400).json({ success: false, message: "Email already exists" }); } const hashed = await bcrypt.hash(password, 10); const user = await User.create({ name: name.trim(), email: email.trim(), password: hashed, phone: phone?.trim() || "", address: address?.trim() || "", }); const { password: pwd, ...userWithoutPassword } = user._doc; const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" }); res.status(201).json({ success: true, token, user: userWithoutPassword, }); } catch (err) { console.error("REGISTER ERROR:", err); res.status(500).json({ success: false, message: "Server error" }); } } static async login(req, res) { try { await connectDB(); const { email, password } = req.body; const user = await User.findOne({ email }); if (!user) { return res.status(404).json({ success: false, message: "User not found" }); } const match = await bcrypt.compare(password, user.password); if (!match) { return res.status(401).json({ success: false, message: "Invalid credentials" }); } const { password: pwd, ...userWithoutPassword } = user._doc; const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" }); res.json({ success: true, token, user: userWithoutPassword }); } catch (err) { res.status(500).json({ success: false, message: err.message }); } }
 
   /* ========== PRODUCTS ========== */
 
@@ -952,47 +871,7 @@ class ProductController {
   }
 
   /* ========== ORDERS ========== */
-
-  static async createOrder(req, res) {
-    try {
-      await connectDB();
-      const order = await ProductService.createOrder(req.body);
-      res.status(201).json({ success: true, order });
-    } catch (err) {
-      res.status(400).json({ success: false, message: err.message });
-    }
-  }
-
-  static async getAllOrders(req, res) {
-    try {
-      await connectDB();
-      const orders = await ProductService.getAllOrders();
-      res.json({ success: true, orders });
-    } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
-    }
-  }
-
-  static async getUserOrders(req, res) {
-    try {
-      await connectDB();
-      const orders = await ProductService.getUserOrders(req.params.email);
-      res.json({ success: true, orders });
-    } catch (err) {
-      res.status(400).json({ success: false, message: err.message });
-    }
-  }
-
-  static async deleteAllOrders(req, res) {
-    try {
-      await connectDB();
-      await ProductService.deleteAllOrders();
-      res.json({ success: true });
-    } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
-    }
-  }
-}
+static async createOrder(req, res) { try { await connectDB(); const order = await ProductService.createOrder(req.body); res.status(201).json({ success: true, order }); } catch (err) { res.status(400).json({ success: false, message: err.message }); } } static async getAllOrders(req, res) { try { await connectDB(); const orders = await ProductService.getAllOrders(); res.json({ success: true, orders }); } catch (err) { res.status(500).json({ success: false, message: err.message }); } } static async getUserOrders(req, res) { try { await connectDB(); const orders = await ProductService.getUserOrders(req.params.email); res.json({ success: true, orders }); } catch (err) { res.status(400).json({ success: false, message: err.message }); } } static async deleteAllOrders(req, res) { try { await connectDB(); await ProductService.deleteAllOrders(); res.json({ success: true }); } catch (err) { res.status(500).json({ success: false, message: err.message }); } } }
 
 module.exports = ProductController;
 
