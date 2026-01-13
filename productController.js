@@ -799,9 +799,6 @@
 
 
 
-
-
-
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const connectDB = require("./db");
@@ -810,295 +807,241 @@ const User = require("./userSchema");
 
 class ProductController {
 
-  /* ========== AUTH ========== */
+  /* ================= AUTH ================= */
 
+  // ========== REGISTER ==========
+  static async register(req, res) {
+    try {
+      await connectDB();
 
-    //  ============== register =============  //
-static async register(req, res) {
-  try {
-    await connectDB();
+      const { name, email, password, phone, address } = req.body;
 
-    const { name, email, password, phone, address } = req.body;
+      if (!name || !email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: "Name, email and password are required",
+        });
+      }
 
-    // ✅ Strong validation
-    if (!name || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Name, email and password are required",
+      const cleanEmail = email.trim().toLowerCase();
+      const exists = await User.findOne({ email: cleanEmail });
+      if (exists) {
+        return res.status(400).json({
+          success: false,
+          message: "User already registered with this email",
+        });
+      }
+
+      const hashedPassword = await bcrypt.hash(password.trim(), 10);
+      const user = await User.create({
+        name: name.trim(),
+        email: cleanEmail,
+        password: hashedPassword,
+        phone: phone?.trim() || "",
+        address: address?.trim() || "",
       });
-    }
 
-    // ✅ Normalize email
-    const cleanEmail = email.trim().toLowerCase();
+      const { password: pwd, ...safeUser } = user._doc;
+      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
-    // ✅ Check existing user
-    const exists = await User.findOne({ email: cleanEmail });
-    if (exists) {
-      return res.status(400).json({
-        success: false,
-        message: "User already registered with this email",
+      return res.status(201).json({
+        success: true,
+        message: "Registration successful",
+        token,
+        user: safeUser,
       });
+
+    } catch (err) {
+      console.error("REGISTER ERROR:", err.message);
+      return res.status(500).json({ success: false, message: "Internal server error" });
     }
-
-    // ✅ Hash password
-    const hashedPassword = await bcrypt.hash(password.trim(), 10);
-
-    // ✅ Create user
-    const user = await User.create({
-      name: name.trim(),
-      email: cleanEmail,
-      password: hashedPassword,
-      phone: phone?.trim() || "",
-      address: address?.trim() || "",
-    });
-
-    // ✅ Remove password from response
-    const { password: pwd, ...safeUser } = user._doc;
-
-    // ✅ Generate token
-    const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    return res.status(201).json({
-      success: true,
-      message: "Registration successful",
-      token,
-      user: safeUser,
-    });
-
-  } catch (err) {
-    console.error("REGISTER ERROR:", err.message);
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
   }
-}
 
+  // ========== LOGIN ==========
+  static async login(req, res) {
+    try {
+      await connectDB();
 
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: "Email and password are required",
+        });
+      }
 
-   //   // ========  login  ==========  //   //
+      const cleanEmail = email.trim().toLowerCase();
+      const user = await User.findOne({ email: cleanEmail });
+      if (!user) {
+        return res.status(404).json({ success: false, message: "User not registered" });
+      }
 
-static async login(req, res) {
-  try {
-    await connectDB();
+      const isMatch = await bcrypt.compare(password.trim(), user.password);
+      if (!isMatch) {
+        return res.status(401).json({ success: false, message: "Invalid email or password" });
+      }
 
-    const { email, password } = req.body;
+      const { password: pwd, ...safeUser } = user._doc;
+      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
-    // ✅ Validation
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Email and password are required",
+      return res.status(200).json({
+        success: true,
+        message: "Login successful",
+        token,
+        user: safeUser,
       });
+
+    } catch (err) {
+      console.error("LOGIN ERROR:", err.message);
+      return res.status(500).json({ success: false, message: "Internal server error" });
     }
-
-    // ✅ Normalize email (MATCH register)
-    const cleanEmail = email.trim().toLowerCase();
-
-    // ✅ Find user
-    const user = await User.findOne({ email: cleanEmail });
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not registered",
-      });
-    }
-
-    // ✅ Compare password
-    const isMatch = await bcrypt.compare(password.trim(), user.password);
-    if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid email or password",
-      });
-    }
-
-    // ✅ Remove password
-    const { password: pwd, ...safeUser } = user._doc;
-
-    // ✅ Token
-    const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    return res.status(200).json({
-      success: true,
-      message: "Login successful",
-      token,
-      user: safeUser,
-    });
-
-  } catch (err) {
-    console.error("LOGIN ERROR:", err.message);
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
   }
-}
 
-  /* ========== PRODUCTS ========== */
-static async getAll(req, res) {
-  try {
-    await connectDB();
+  /* ================= PRODUCTS ================= */
 
-    const type = (req.params.type || "").toLowerCase();
+  static async getAll(req, res) {
+    try {
+      await connectDB();
+      const type = (req.params.type || "").trim().toLowerCase();
 
-    if (!type) {
-      return res.status(400).json({
-        success: false,
-        message: "Product type is required",
-      });
+      if (!type || !["veg", "nonveg", "drink"].includes(type)) {
+        return res.status(400).json({ success: false, message: "Invalid or missing product type" });
+      }
+
+      let data;
+      try {
+        data = await ProductService.getAll(type);
+      } catch (err) {
+        console.error("ProductService.getAll ERROR:", err.message);
+        return res.status(500).json({ success: false, message: "Failed to fetch products" });
+      }
+
+      return res.json({ success: true, data });
+
+    } catch (err) {
+      console.error("GET PRODUCTS ERROR:", err.message);
+      return res.status(500).json({ success: false, message: "Internal server error" });
     }
-
-    const data = await ProductService.getAll(type);
-
-    return res.json({
-      success: true,
-      data,
-    });
-
-  } catch (err) {
-    console.error("GET PRODUCTS ERROR:", err.message);
-
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
   }
-}
-
 
   static async saveOne(req, res) {
     try {
       await connectDB();
-      const data = await ProductService.saveOne(req.params.type, req.body);
-      res.status(201).json({ success: true, data });
+      const type = (req.params.type || "").trim().toLowerCase();
+
+      if (!type || !["veg", "nonveg", "drink"].includes(type)) {
+        return res.status(400).json({ success: false, message: "Invalid product type" });
+      }
+
+      const data = await ProductService.saveOne(type, req.body);
+      return res.status(201).json({ success: true, data });
+
     } catch (err) {
-      res.status(400).json({ success: false, message: err.message });
+      console.error("SAVE ONE PRODUCT ERROR:", err.message);
+      return res.status(500).json({ success: false, message: "Failed to save product" });
     }
   }
 
   static async saveAll(req, res) {
     try {
       await connectDB();
-      const data = await ProductService.saveAll(req.params.type, req.body);
-      res.status(201).json({ success: true, data });
+      const type = (req.params.type || "").trim().toLowerCase();
+
+      if (!type || !["veg", "nonveg", "drink"].includes(type)) {
+        return res.status(400).json({ success: false, message: "Invalid product type" });
+      }
+
+      const data = await ProductService.saveAll(type, req.body);
+      return res.status(201).json({ success: true, data });
+
     } catch (err) {
-      res.status(400).json({ success: false, message: err.message });
+      console.error("SAVE ALL PRODUCTS ERROR:", err.message);
+      return res.status(500).json({ success: false, message: "Failed to save products" });
     }
   }
 
   static async deleteOne(req, res) {
     try {
       await connectDB();
-      const data = await ProductService.deleteOne(req.params.type, req.params.id);
-      res.json({ success: true, data });
+      const type = (req.params.type || "").trim().toLowerCase();
+
+      if (!type || !["veg", "nonveg", "drink"].includes(type)) {
+        return res.status(400).json({ success: false, message: "Invalid product type" });
+      }
+
+      const data = await ProductService.deleteOne(type, req.params.id);
+      return res.json({ success: true, data });
+
     } catch (err) {
-      res.status(400).json({ success: false, message: err.message });
+      console.error("DELETE ONE PRODUCT ERROR:", err.message);
+      return res.status(500).json({ success: false, message: err.message });
     }
   }
 
   static async deleteAll(req, res) {
     try {
       await connectDB();
-      const result = await ProductService.deleteAll(req.params.type);
-      res.json({ success: true, deleted: result.deletedCount });
+      const type = (req.params.type || "").trim().toLowerCase();
+
+      if (!type || !["veg", "nonveg", "drink"].includes(type)) {
+        return res.status(400).json({ success: false, message: "Invalid product type" });
+      }
+
+      const result = await ProductService.deleteAll(type);
+      return res.json({ success: true, deleted: result.deletedCount });
+
     } catch (err) {
-      res.status(400).json({ success: false, message: err.message });
+      console.error("DELETE ALL PRODUCTS ERROR:", err.message);
+      return res.status(500).json({ success: false, message: err.message });
     }
   }
 
-  /* ========== ORDERS ========== */
-static async createOrder(req, res) {
-  try {
-    await connectDB();
+  /* ================= ORDERS ================= */
 
-    // ✅ SAFETY CHECK (THIS FIXES 400)
-    if (!req.body || Object.keys(req.body).length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Order data is missing",
-      });
+  static async createOrder(req, res) {
+    try {
+      await connectDB();
+      if (!req.body || Object.keys(req.body).length === 0) {
+        return res.status(400).json({ success: false, message: "Order data is missing" });
+      }
+
+      const order = await ProductService.createOrder(req.body);
+      return res.status(201).json({ success: true, order });
+
+    } catch (err) {
+      console.error("CREATE ORDER ERROR:", err.message);
+      return res.status(400).json({ success: false, message: "Invalid order data" });
     }
-
-    const order = await ProductService.createOrder(req.body);
-
-    return res.status(201).json({
-      success: true,
-      order,
-    });
-
-  } catch (err) {
-    console.error("CREATE ORDER ERROR:", err);
-
-    return res.status(400).json({
-      success: false,
-      message: "Invalid order data",
-    });
   }
-}
 
+  static async getUserOrders(req, res) {
+    try {
+      await connectDB();
+      const email = req.params.email;
+      if (!email) {
+        return res.status(400).json({ success: false, message: "Email is required" });
+      }
 
-static async getUserOrders(req, res) {
-  try {
-    await connectDB();
+      const orders = await ProductService.getUserOrders(email);
+      return res.json({ success: true, orders });
 
-    // ✅ SAFETY CHECK
-    if (!req.params.email) {
-      return res.status(400).json({
-        success: false,
-        message: "Email is required",
-      });
+    } catch (err) {
+      console.error("GET USER ORDERS ERROR:", err.message);
+      return res.status(500).json({ success: false, message: "Failed to fetch user orders" });
     }
-
-    const orders = await ProductService.getUserOrders(req.params.email);
-
-    return res.json({
-      success: true,
-      orders,
-    });
-
-  } catch (err) {
-    console.error("GET USER ORDERS ERROR:", err);
-
-    return res.status(400).json({
-      success: false,
-      message: "Failed to fetch user orders",
-    });
   }
-}
 
+  static async deleteAllOrders(req, res) {
+    try {
+      await connectDB();
+      await ProductService.deleteAllOrders();
+      return res.json({ success: true });
 
-static async deleteAllOrders(req, res) {
-  try {
-    await connectDB();
-
-    await ProductService.deleteAllOrders();
-
-    return res.json({
-      success: true,
-    });
-
-  } catch (err) {
-    console.error("DELETE ALL ORDERS ERROR:", err);
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to delete orders",
-    });
+    } catch (err) {
+      console.error("DELETE ALL ORDERS ERROR:", err.message);
+      return res.status(500).json({ success: false, message: "Failed to delete orders" });
+    }
   }
-}
 }
 
 module.exports = ProductController;
- 
-

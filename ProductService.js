@@ -243,6 +243,10 @@
 
 
 
+
+
+
+
 const mongoose = require("mongoose");
 const connectDB = require("./db");
 const { Veg, Nonveg, Drink, Order } = require("./schema");
@@ -258,137 +262,126 @@ class ProductService {
 
   /* ================= SAFE MODEL RESOLVER ================= */
   static getModel(type) {
-    if (!type || typeof type !== "string") {
-      throw new Error("Product type is required");
-    }
-
-    const key = type.trim().toLowerCase();
-
+    const key = (type || "").trim().toLowerCase();
     const Model = collectionMap[key];
     if (!Model) {
       throw new Error(`Invalid product type: ${key}`);
     }
-
     return Model;
   }
 
   /* ================= PRODUCTS ================= */
 
   static async getAll(type) {
-    await connectDB();
-    const Model = this.getModel(type);
-
-    return Model
-      .find({})
-      .sort({ createdAt: -1 })
-      .lean();
+    try {
+      await connectDB();
+      const Model = this.getModel(type);
+      return await Model.find({}).sort({ createdAt: -1 }).lean();
+    } catch (err) {
+      console.error("GET ALL PRODUCTS ERROR:", err.message);
+      throw new Error("Failed to fetch products");
+    }
   }
 
   static async saveOne(type, data) {
-    await connectDB();
-    const Model = this.getModel(type);
-
-    if (!data || typeof data !== "object") {
-      throw new Error("Invalid product data");
+    try {
+      await connectDB();
+      const Model = this.getModel(type);
+      if (!data || typeof data !== "object") throw new Error("Invalid product data");
+      return await Model.create(data);
+    } catch (err) {
+      console.error("SAVE ONE PRODUCT ERROR:", err.message);
+      throw new Error("Failed to save product");
     }
-
-    return Model.create(data);
   }
 
   static async saveAll(type, dataArray) {
-    await connectDB();
-
-    if (!Array.isArray(dataArray) || dataArray.length === 0) {
-      throw new Error("Data must be a non-empty array");
+    try {
+      await connectDB();
+      if (!Array.isArray(dataArray) || dataArray.length === 0) throw new Error("Data must be a non-empty array");
+      const Model = this.getModel(type);
+      return await Model.insertMany(dataArray, { ordered: false });
+    } catch (err) {
+      console.error("SAVE ALL PRODUCTS ERROR:", err.message);
+      throw new Error("Failed to save products");
     }
-
-    const Model = this.getModel(type);
-    return Model.insertMany(dataArray, { ordered: false });
   }
 
   static async deleteOne(type, id) {
-    await connectDB();
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      throw new Error("Invalid Mongo ID");
+    try {
+      await connectDB();
+      if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Invalid Mongo ID");
+      const Model = this.getModel(type);
+      const deleted = await Model.findByIdAndDelete(id).lean();
+      if (!deleted) throw new Error("Item not found");
+      return deleted;
+    } catch (err) {
+      console.error("DELETE ONE PRODUCT ERROR:", err.message);
+      throw new Error("Failed to delete product");
     }
-
-    const Model = this.getModel(type);
-    const deleted = await Model.findByIdAndDelete(id).lean();
-
-    if (!deleted) {
-      throw new Error("Item not found");
-    }
-
-    return deleted;
   }
 
   static async deleteAll(type) {
-    await connectDB();
-    const Model = this.getModel(type);
-
-    return Model.deleteMany({});
+    try {
+      await connectDB();
+      const Model = this.getModel(type);
+      return await Model.deleteMany({});
+    } catch (err) {
+      console.error("DELETE ALL PRODUCTS ERROR:", err.message);
+      throw new Error("Failed to delete products");
+    }
   }
 
   /* ================= ORDERS ================= */
 
   static async createOrder(data) {
-    await connectDB();
+    try {
+      await connectDB();
+      if (!data || typeof data !== "object") throw new Error("Invalid order data");
 
-    if (!data || typeof data !== "object") {
-      throw new Error("Invalid order data");
+      const { email, items } = data;
+      if (!email || !Array.isArray(items) || items.length === 0) throw new Error("Email and items are required");
+
+      const subtotal = items.reduce((sum, i) => sum + (Number(i.price) || 0) * (Number(i.quantity) || 1), 0);
+      const gst = +(subtotal * 0.05).toFixed(2);
+      const finalTotal = +(subtotal + gst).toFixed(2);
+
+      return await Order.create({ email, items, subtotal, gst, finalTotal });
+    } catch (err) {
+      console.error("CREATE ORDER ERROR:", err.message);
+      throw new Error("Failed to create order");
     }
-
-    const { email, items } = data;
-
-    if (!email || !Array.isArray(items) || items.length === 0) {
-      throw new Error("Email and items are required");
-    }
-
-    const subtotal = items.reduce(
-      (sum, i) =>
-        sum +
-        (Number(i.price) || 0) *
-        (Number(i.quantity) || 1),
-      0
-    );
-
-    const gst = +(subtotal * 0.05).toFixed(2);
-    const finalTotal = +(subtotal + gst).toFixed(2);
-
-    return Order.create({
-      email,
-      items,
-      subtotal,
-      gst,
-      finalTotal,
-    });
   }
 
   static async getAllOrders() {
-    await connectDB();
-    return Order
-      .find({})
-      .sort({ createdAt: -1 })
-      .lean();
+    try {
+      await connectDB();
+      return await Order.find({}).sort({ createdAt: -1 }).lean();
+    } catch (err) {
+      console.error("GET ALL ORDERS ERROR:", err.message);
+      throw new Error("Failed to fetch orders");
+    }
   }
 
   static async getUserOrders(email) {
-    await connectDB();
-
-    if (!email) {
-      throw new Error("Email is required");
+    try {
+      await connectDB();
+      if (!email) throw new Error("Email is required");
+      return await Order.find({ email }).sort({ createdAt: -1 }).lean();
+    } catch (err) {
+      console.error("GET USER ORDERS ERROR:", err.message);
+      throw new Error("Failed to fetch user orders");
     }
-
-    return Order
-      .find({ email })
-      .sort({ createdAt: -1 })
-      .lean();
   }
 
   static async deleteAllOrders() {
-    await connectDB();
-    return Order.deleteMany({});
+    try {
+      await connectDB();
+      return await Order.deleteMany({});
+    } catch (err) {
+      console.error("DELETE ALL ORDERS ERROR:", err.message);
+      throw new Error("Failed to delete orders");
+    }
   }
 }
 

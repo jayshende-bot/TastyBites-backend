@@ -47,7 +47,6 @@
 // 
 
 
-
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
@@ -60,26 +59,29 @@ const app = express();
 /* ================= MIDDLEWARE ================= */
 app.use(
   cors({
-    origin: "*",
+    origin: "*", // Allow all origins; change to your frontend URL in production if needed
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-// 🔥 THIS LINE FIXES YOUR ERROR
+// Enable preflight for all routes
 app.options("*", cors());
 
+// Parse JSON & URL-encoded data
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 /* ================= DATABASE ================= */
-/**
- * IMPORTANT:
- * On Vercel, the function may run multiple times.
- * Your connectDB() must internally handle
- * "already connected" state (mongoose cached connection).
- */
-connectDB();
+// Safe DB connection: prevents crash if DB fails
+(async () => {
+  try {
+    await connectDB();
+  } catch (err) {
+    console.error("❌ MongoDB connection failed:", err.message);
+    // Do not crash server; routes can still respond with errors
+  }
+})();
 
 /* ================= ROUTES ================= */
 app.get("/", (req, res) => {
@@ -89,19 +91,19 @@ app.get("/", (req, res) => {
   });
 });
 
-/**
- * API prefix
- * Example:
- * /api/v1/veg
- * /api/v1/nonveg
- */
 app.use("/api/v1", productRoutes);
 
+/* ================= ERROR HANDLER ================= */
+// Catch-all middleware to prevent unhandled errors from crashing server
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({
+    success: false,
+    message: "Internal server error (caught by fallback)",
+  });
+});
+
 /* ================= LOCAL DEV ONLY ================= */
-/**
- * Vercel DOES NOT allow app.listen()
- * So we start server ONLY when running locally
- */
 if (process.env.NODE_ENV !== "production") {
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
