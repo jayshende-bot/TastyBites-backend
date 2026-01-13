@@ -1032,26 +1032,38 @@ static async createOrder(req, res) {
 }
 
 
-static async getAllOrders(req, res) {
+static async getAll(req, res) {
   try {
     await connectDB();
 
-    const orders = await ProductService.getAllOrders();
+    const type = (req.params.type || "").toLowerCase();
+
+    if (!type) {
+      return res.status(400).json({
+        success: false,
+        message: "Product type is required",
+      });
+    }
+
+    const data = await ProductService.getAll(type);
 
     return res.json({
       success: true,
-      orders,
+      data,
     });
 
   } catch (err) {
-    console.error("GET ALL ORDERS ERROR:", err);
+    console.error("GET PRODUCTS ERROR:", err.message);
 
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch orders",
+      message: err.message,
     });
   }
 }
+
+
+
 
 
 static async getUserOrders(req, res) {
