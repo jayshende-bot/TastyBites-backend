@@ -797,7 +797,7 @@
 //   }
 // }
 
-// module.exports = ProductController;const bcrypt = require("bcryptjs");
+
 
 
 
@@ -1097,7 +1097,8 @@ static async deleteAllOrders(req, res) {
     });
   }
 }
-
+}
 
 module.exports = ProductController;
+ 
 
