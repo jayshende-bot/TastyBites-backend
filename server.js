@@ -66,7 +66,7 @@ app.use(
   })
 );
 
-// ✅ handle preflight explicitly
+// 🔥 THIS LINE FIXES YOUR ERROR
 app.options("*", cors());
 
 app.use(express.json());
