@@ -812,7 +812,138 @@ class ProductController {
 
   /* ========== AUTH ========== */
 
-static async register(req, res) { try { await connectDB(); const { name, email, password, phone, address } = req.body; if (!name?.trim() || !email?.trim() || !password?.trim()) { return res.status(400).json({ success: false, message: "Name, email and password are required", }); } const exists = await User.findOne({ email }); if (exists) { return res.status(400).json({ success: false, message: "Email already exists" }); } const hashed = await bcrypt.hash(password, 10); const user = await User.create({ name: name.trim(), email: email.trim(), password: hashed, phone: phone?.trim() || "", address: address?.trim() || "", }); const { password: pwd, ...userWithoutPassword } = user._doc; const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" }); res.status(201).json({ success: true, token, user: userWithoutPassword, }); } catch (err) { console.error("REGISTER ERROR:", err); res.status(500).json({ success: false, message: "Server error" }); } } static async login(req, res) { try { await connectDB(); const { email, password } = req.body; const user = await User.findOne({ email }); if (!user) { return res.status(404).json({ success: false, message: "User not found" }); } const match = await bcrypt.compare(password, user.password); if (!match) { return res.status(401).json({ success: false, message: "Invalid credentials" }); } const { password: pwd, ...userWithoutPassword } = user._doc; const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" }); res.json({ success: true, token, user: userWithoutPassword }); } catch (err) { res.status(500).json({ success: false, message: err.message }); } }
+
+    //  ============== register =============  //
+static async register(req, res) {
+  try {
+    await connectDB();
+
+    const { name, email, password, phone, address } = req.body;
+
+    // ✅ Strong validation
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, email and password are required",
+      });
+    }
+
+    // ✅ Normalize email
+    const cleanEmail = email.trim().toLowerCase();
+
+    // ✅ Check existing user
+    const exists = await User.findOne({ email: cleanEmail });
+    if (exists) {
+      return res.status(400).json({
+        success: false,
+        message: "User already registered with this email",
+      });
+    }
+
+    // ✅ Hash password
+    const hashedPassword = await bcrypt.hash(password.trim(), 10);
+
+    // ✅ Create user
+    const user = await User.create({
+      name: name.trim(),
+      email: cleanEmail,
+      password: hashedPassword,
+      phone: phone?.trim() || "",
+      address: address?.trim() || "",
+    });
+
+    // ✅ Remove password from response
+    const { password: pwd, ...safeUser } = user._doc;
+
+    // ✅ Generate token
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Registration successful",
+      token,
+      user: safeUser,
+    });
+
+  } catch (err) {
+    console.error("REGISTER ERROR:", err.message);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+}
+
+
+
+   //   // ========  login  ==========  //   //
+
+static async login(req, res) {
+  try {
+    await connectDB();
+
+    const { email, password } = req.body;
+
+    // ✅ Validation
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required",
+      });
+    }
+
+    // ✅ Normalize email (MATCH register)
+    const cleanEmail = email.trim().toLowerCase();
+
+    // ✅ Find user
+    const user = await User.findOne({ email: cleanEmail });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not registered",
+      });
+    }
+
+    // ✅ Compare password
+    const isMatch = await bcrypt.compare(password.trim(), user.password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    // ✅ Remove password
+    const { password: pwd, ...safeUser } = user._doc;
+
+    // ✅ Token
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Login successful",
+      token,
+      user: safeUser,
+    });
+
+  } catch (err) {
+    console.error("LOGIN ERROR:", err.message);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+}
 
   /* ========== PRODUCTS ========== */
 
@@ -871,7 +1002,108 @@ static async register(req, res) { try { await connectDB(); const { name, email, 
   }
 
   /* ========== ORDERS ========== */
-static async createOrder(req, res) { try { await connectDB(); const order = await ProductService.createOrder(req.body); res.status(201).json({ success: true, order }); } catch (err) { res.status(400).json({ success: false, message: err.message }); } } static async getAllOrders(req, res) { try { await connectDB(); const orders = await ProductService.getAllOrders(); res.json({ success: true, orders }); } catch (err) { res.status(500).json({ success: false, message: err.message }); } } static async getUserOrders(req, res) { try { await connectDB(); const orders = await ProductService.getUserOrders(req.params.email); res.json({ success: true, orders }); } catch (err) { res.status(400).json({ success: false, message: err.message }); } } static async deleteAllOrders(req, res) { try { await connectDB(); await ProductService.deleteAllOrders(); res.json({ success: true }); } catch (err) { res.status(500).json({ success: false, message: err.message }); } } }
+static async createOrder(req, res) {
+  try {
+    await connectDB();
+
+    // ✅ SAFETY CHECK (THIS FIXES 400)
+    if (!req.body || Object.keys(req.body).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Order data is missing",
+      });
+    }
+
+    const order = await ProductService.createOrder(req.body);
+
+    return res.status(201).json({
+      success: true,
+      order,
+    });
+
+  } catch (err) {
+    console.error("CREATE ORDER ERROR:", err);
+
+    return res.status(400).json({
+      success: false,
+      message: "Invalid order data",
+    });
+  }
+}
+
+
+static async getAllOrders(req, res) {
+  try {
+    await connectDB();
+
+    const orders = await ProductService.getAllOrders();
+
+    return res.json({
+      success: true,
+      orders,
+    });
+
+  } catch (err) {
+    console.error("GET ALL ORDERS ERROR:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch orders",
+    });
+  }
+}
+
+
+static async getUserOrders(req, res) {
+  try {
+    await connectDB();
+
+    // ✅ SAFETY CHECK
+    if (!req.params.email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+      });
+    }
+
+    const orders = await ProductService.getUserOrders(req.params.email);
+
+    return res.json({
+      success: true,
+      orders,
+    });
+
+  } catch (err) {
+    console.error("GET USER ORDERS ERROR:", err);
+
+    return res.status(400).json({
+      success: false,
+      message: "Failed to fetch user orders",
+    });
+  }
+}
+
+
+static async deleteAllOrders(req, res) {
+  try {
+    await connectDB();
+
+    await ProductService.deleteAllOrders();
+
+    return res.json({
+      success: true,
+    });
+
+  } catch (err) {
+    console.error("DELETE ALL ORDERS ERROR:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete orders",
+    });
+  }
+}
+
 
 module.exports = ProductController;
 
