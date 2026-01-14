@@ -812,19 +812,19 @@ class ProductController {
 
   /* ================= AUTH ================= */
 
+  // ===== REGISTER (YOUR CODE – UNCHANGED) =====
   static async register(req, res) {
     try {
       await connectDB();
 
       const { name, email, password, phone, address } = req.body;
 
-      console.log("[register] Request body:", { name: name ? "✓" : "✗", email: email ? "✓" : "✗", password: password ? "✓" : "✗" });
+      console.log("[register] Request body received");
 
       if (!name || !email || !password) {
         return res.status(400).json({
           success: false,
           message: "Name, email and password are required",
-          received: { name: !!name, email: !!email, password: !!password },
         });
       }
 
@@ -837,19 +837,38 @@ class ProductController {
         });
       }
 
+      if (!address || typeof address !== "object") {
+        return res.status(400).json({
+          success: false,
+          message: "Address is required",
+        });
+      }
+
+      const pincode = String(address.pincode || "").trim();
+
+      if (!pincode) {
+        return res.status(400).json({
+          success: false,
+          message: "Pincode is required",
+        });
+      }
+
+      if (!/^\d{6}$/.test(pincode)) {
+        return res.status(400).json({
+          success: false,
+          message: "Pincode must be a 6-digit number",
+        });
+      }
+
       const hashedPassword = await bcrypt.hash(password.trim(), 10);
 
-      // Handle address as object if provided
-      let addressObj = {};
-      if (address && typeof address === 'object') {
-        addressObj = {
-          house: address.house || "",
-          street: address.street || "",
-          city: address.city || "",
-          state: address.state || "",
-          pincode: address.pincode ? String(address.pincode) : "",
-        };
-      }
+      const addressObj = {
+        house: String(address.house || "").trim(),
+        street: String(address.street || "").trim(),
+        city: String(address.city || "").trim(),
+        state: String(address.state || "").trim(),
+        pincode: pincode,
+      };
 
       const user = await User.create({
         name: name.trim(),
@@ -860,6 +879,7 @@ class ProductController {
       });
 
       const { password: pwd, ...safeUser } = user._doc;
+
       const token = jwt.sign(
         { id: user._id },
         process.env.JWT_SECRET,
@@ -874,7 +894,7 @@ class ProductController {
       });
 
     } catch (err) {
-      console.error("REGISTER ERROR:", err.message);
+      console.error("REGISTER ERROR FULL:", err);
       return res.status(500).json({
         success: false,
         message: "Internal server error",
@@ -882,24 +902,25 @@ class ProductController {
     }
   }
 
+  // ===== LOGIN (ADDED) =====
   static async login(req, res) {
     try {
       await connectDB();
 
       const { email, password } = req.body;
 
-      console.log("[login] Request body:", { email: email ? "✓" : "✗", password: password ? "✓" : "✗" });
+      console.log("[login] Request body received");
 
       if (!email || !password) {
         return res.status(400).json({
           success: false,
           message: "Email and password are required",
-          received: { email: !!email, password: !!password },
         });
       }
 
       const cleanEmail = email.trim().toLowerCase();
       const user = await User.findOne({ email: cleanEmail });
+
       if (!user) {
         return res.status(404).json({
           success: false,
@@ -920,6 +941,7 @@ class ProductController {
       }
 
       const { password: pwd, ...safeUser } = user._doc;
+
       const token = jwt.sign(
         { id: user._id },
         process.env.JWT_SECRET,
@@ -934,13 +956,14 @@ class ProductController {
       });
 
     } catch (err) {
-      console.error("LOGIN ERROR:", err.message);
+      console.error("LOGIN ERROR FULL:", err);
       return res.status(500).json({
         success: false,
         message: "Internal server error",
       });
     }
   }
+
 
   /* ================= PRODUCTS ================= */
 
