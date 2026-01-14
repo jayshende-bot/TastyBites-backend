@@ -811,96 +811,83 @@ const User = require("./userSchema");
 class ProductController {
 
   /* ================= AUTH ================= */
+// ===== REGISTER (FINAL CLEAN VERSION) =====
+static async register(req, res) {
+  try {
+    await connectDB();
 
-  // ===== REGISTER (YOUR CODE – UNCHANGED) =====
-  static async register(req, res) {
-    try {
-      await connectDB();
+    const { name, email, password, phone, address } = req.body;
 
-      const { name, email, password, phone, address } = req.body;
-
-      console.log("[register] Request body received");
-
-      if (!name || !email || !password) {
-        return res.status(400).json({
-          success: false,
-          message: "Name, email and password are required",
-        });
-      }
-
-      const cleanEmail = email.trim().toLowerCase();
-      const exists = await User.findOne({ email: cleanEmail });
-      if (exists) {
-        return res.status(400).json({
-          success: false,
-          message: "User already registered with this email",
-        });
-      }
-
-      if (!address || typeof address !== "object") {
-        return res.status(400).json({
-          success: false,
-          message: "Address is required",
-        });
-      }
-
-      const pincode = String(address.pincode || "").trim();
-
-      if (!pincode) {
-        return res.status(400).json({
-          success: false,
-          message: "Pincode is required",
-        });
-      }
-
-      if (!/^\d{6}$/.test(pincode)) {
-        return res.status(400).json({
-          success: false,
-          message: "Pincode must be a 6-digit number",
-        });
-      }
-
-      const hashedPassword = await bcrypt.hash(password.trim(), 10);
-
-      const addressObj = {
-        house: String(address.house || "").trim(),
-        street: String(address.street || "").trim(),
-        city: String(address.city || "").trim(),
-        state: String(address.state || "").trim(),
-        pincode: pincode,
-      };
-
-      const user = await User.create({
-        name: name.trim(),
-        email: cleanEmail,
-        password: hashedPassword,
-        phone: String(phone || "").trim(),
-        address: addressObj,
-      });
-
-      const { password: pwd, ...safeUser } = user._doc;
-
-      const token = jwt.sign(
-        { id: user._id },
-        process.env.JWT_SECRET,
-        { expiresIn: "7d" }
-      );
-
-      return res.status(201).json({
-        success: true,
-        message: "Registration successful",
-        token,
-        user: safeUser,
-      });
-
-    } catch (err) {
-      console.error("REGISTER ERROR FULL:", err);
-      return res.status(500).json({
+    // Validate required fields including nested address
+    if (
+      !name ||
+      !email ||
+      !password ||
+      !phone ||
+      !address ||
+      !address.house ||
+      !address.street ||
+      !address.city ||
+      !address.state ||
+      !address.pincode
+    ) {
+      return res.status(400).json({
         success: false,
-        message: "Internal server error",
+        message: "All fields including address are required",
       });
     }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const exists = await User.findOne({ email: cleanEmail });
+    if (exists) {
+      return res.status(400).json({
+        success: false,
+        message: "User already registered with this email",
+      });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password.trim(), 10);
+
+    // Create user with address exactly as sent
+    const user = await User.create({
+      name: name.trim(),
+      email: cleanEmail,
+      password: hashedPassword,
+      phone: String(phone).trim(),
+      address: {
+        house: String(address.house).trim(),
+        street: String(address.street).trim(),
+        city: String(address.city).trim(),
+        state: String(address.state).trim(),
+        pincode: String(address.pincode).trim(),
+      },
+    });
+
+    const { password: pwd, ...safeUser } = user._doc;
+
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Registration successful",
+      token,
+      user: safeUser,
+    });
+
+  } catch (err) {
+    console.error("REGISTER ERROR FULL:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
+}
+
 
   // ===== LOGIN (ADDED) =====
   static async login(req, res) {
