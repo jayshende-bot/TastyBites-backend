@@ -1,56 +1,3 @@
-// require("dotenv").config();
-// const express = require("express");
-// const mongoose = require("mongoose");
-// const cors = require("cors");
-// const path = require("path");
-
-// const productRoutes = require("./productroutes");
-
-// const app = express();
-
-// // ================================
-// // MIDDLEWARE
-// // ================================
-// app.use(cors());
-// app.use(express.json());
-
-// // ================================
-// // STATIC FILES
-// // ================================
-// app.use("/images", express.static(path.join(__dirname, "images")));
-
-// // ================================
-// // DATABASE CONNECTION (🔥 FIRST)
-// // ================================
-// mongoose
-//   .connect(process.env.MONGO_URL)
-//   .then(() => {
-//     console.log("✅ MongoDB Connected");
-
-//     // ================================
-//     // ROUTES (🔥 ONLY AFTER DB CONNECTS)
-//     // ================================
-//     app.use("/api/v1/products", productRoutes);
-
-//     // ================================
-//     // START SERVER
-//     // ================================
-//     const PORT = process.env.PORT || 3000;
-//     app.listen(PORT, () => {
-//       console.log(`🚀 Server running on port ${PORT}`);
-//     });
-//   })
-//   .catch((err) => {
-//     console.error("❌ MongoDB Connection Failed:", err);
-//   });
-// require("dotenv").config();
-// 
-
-
-
-
-
-
 
 const express = require("express");
 const cors = require("cors");
@@ -61,7 +8,7 @@ const productRoutes = require("./productroutes");
 
 const app = express();
 
-/* ================= CORS (FIXED FOR FRONTEND) ================= */
+/* ================= CORS ================= */
 const allowedOrigins = [
   "https://frontend-two-dusky-53.vercel.app",
 ];
@@ -69,14 +16,10 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests with no origin (Postman, server-side, etc.)
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      } else {
-        return callback(new Error("Not allowed by CORS"));
-      }
+      // Allow Postman / server-side requests
+      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+      // Reject unknown origins without throwing
+      return callback(null, false);
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -84,14 +27,13 @@ app.use(
   })
 );
 
-// Enable preflight for all routes
 app.options("*", cors());
 
 /* ================= BODY PARSERS ================= */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-/* ================= FIX FAVICON NOISE ================= */
+/* ================= FAVICON ================= */
 app.get("/favicon.ico", (req, res) => res.status(204).end());
 
 /* ================= DATABASE ================= */
@@ -125,11 +67,10 @@ app.use((req, res) => {
 
 /* ================= GLOBAL ERROR HANDLER ================= */
 app.use((err, req, res, next) => {
-  console.error("🔥 ERROR:", err.message);
-
+  console.error("🔥 GLOBAL ERROR:", err.message);
   res.status(500).json({
     success: false,
-    message: err.message || "Internal server error",
+    message: "Internal server error",
   });
 });
 
