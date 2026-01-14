@@ -272,13 +272,18 @@ class ProductService {
 
   static async getAll(type) {
     try {
+      console.log("[ProductService.getAll] Getting model for type:", type);
       const Model = this.getModel(type);
+      console.log("[ProductService.getAll] Model retrieved, executing find...");
+
       const data = await Model.find({}).sort({ createdAt: -1 }).lean();
-      console.log(`✅ Retrieved ${data.length} ${type} products`);
-      return data;
+      console.log("[ProductService.getAll] Found", data?.length || 0, 'products');
+
+      return data || [];
     } catch (err) {
-      console.error("GET ALL PRODUCTS ERROR:", err.message, err.stack);
-      throw err; // Re-throw original error with full context
+      console.error("[ProductService.getAll] ERROR:", err.message);
+      console.error("[ProductService.getAll] Stack:", err.stack);
+      throw err;
     }
   }
 

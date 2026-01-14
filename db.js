@@ -7,21 +7,37 @@ if (!cached) {
 }
 
 const connectDB = async () => {
-  if (cached.conn) return cached.conn;
+  // Return cached connection if available
+  if (cached.conn) {
+    console.log("[DB] Using cached MongoDB connection");
+    return cached.conn;
+  }
 
   if (!process.env.MONGODB_URI) {
-    throw new Error("❌ MONGODB_URI not defined");
+    const error = "MONGODB_URI environment variable is not set";
+    console.error("[DB] ERROR:", error);
+    throw new Error(error);
   }
+
+  console.log("[DB] Attempting to connect to MongoDB...");
 
   if (!cached.promise) {
     cached.promise = mongoose.connect(process.env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 30000,
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
     });
   }
 
-  cached.conn = await cached.promise;
-  console.log("✅ MongoDB connected");
-  return cached.conn;
+  try {
+    cached.conn = await cached.promise;
+    console.log("[DB] ✅ MongoDB connected successfully");
+    return cached.conn;
+  } catch (err) {
+    console.error("[DB] ❌ Connection failed:", err.message);
+    cached.promise = null; // Reset promise on failure
+    throw err;
+  }
 };
 
 module.exports = connectDB;

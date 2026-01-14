@@ -926,18 +926,27 @@ class ProductController {
 
   static async getAll(req, res) {
     try {
-      await connectDB();
+      console.log("[getAll] Starting request for type:", req.params.type);
+
+      // Ensure DB connection
+      console.log("[getAll] Attempting DB connection...");
+      const conn = await connectDB();
+      console.log("[getAll] DB connected successfully");
 
       const type = (req.params.type || "").trim().toLowerCase();
+      console.log("[getAll] Normalized type:", type);
 
       if (!["veg", "nonveg", "drink"].includes(type)) {
+        console.log("[getAll] Invalid type:", type);
         return res.status(400).json({
           success: false,
-          message: "Invalid product type",
+          message: "Invalid product type. Use: veg, nonveg, or drink",
         });
       }
 
+      console.log("[getAll] Fetching data for type:", type);
       const data = await ProductService.getAll(type);
+      console.log("[getAll] Successfully fetched", data?.length || 0, "products");
 
       return res.json({
         success: true,
@@ -945,15 +954,19 @@ class ProductController {
       });
 
     } catch (err) {
-      console.error("GET PRODUCTS ERROR:", err.message, err.stack);
+      console.error("[getAll] ERROR DETAILS:");
+      console.error("  Message:", err.message);
+      console.error("  Stack:", err.stack);
+      console.error("  Name:", err.name);
+
       return res.status(500).json({
         success: false,
         message: "Failed to fetch products",
         error: err.message,
+        type: err.name,
       });
     }
   }
-
 
   static async saveOne(req, res) {
     try {
