@@ -68,6 +68,8 @@ app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
     message: "TastyBites API running 🚀",
+    env: process.env.NODE_ENV || "development",
+    mongodb: process.env.MONGODB_URI ? "configured" : "NOT CONFIGURED",
   });
 });
 
@@ -85,9 +87,11 @@ app.use((req, res) => {
 /* ================= GLOBAL ERROR HANDLER ================= */
 app.use((err, req, res, next) => {
   console.error("🔥 GLOBAL ERROR:", err.message);
-  res.status(500).json({
+  console.error("Stack:", err.stack);
+  res.status(err.status || 500).json({
     success: false,
-    message: "Internal server error",
+    message: err.message || "Internal server error",
+    error: process.env.NODE_ENV === "production" ? undefined : err.message,
   });
 });
 
