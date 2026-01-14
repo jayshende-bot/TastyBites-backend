@@ -52,21 +52,21 @@
 
 
 
+
+
 const jwt = require("jsonwebtoken");
 
 const authMiddleware = (req, res, next) => {
 
   /* ================= PUBLIC ROUTES ================= */
-  const publicRoutes = [
-  "/products/veg",
-  "/products/nonveg",
-  "/products/drink",
-  "/products/register",
-  "/products/login",
-];
+  const publicPrefixes = [
+    "/api/v1/products", // allows /products/veg, nonveg, drink
+    "/api/v1/register",
+    "/api/v1/login",
+  ];
 
-
-  if (publicRoutes.includes(req.path)) {
+  // ✅ Allow public routes by prefix match
+  if (publicPrefixes.some((path) => req.path.startsWith(path))) {
     return next();
   }
 
@@ -88,8 +88,8 @@ const authMiddleware = (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
     req.userId = decoded.id;
+
     next();
 
   } catch (err) {
