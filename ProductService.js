@@ -273,10 +273,12 @@ class ProductService {
   static async getAll(type) {
     try {
       const Model = this.getModel(type);
-      return await Model.find({}).sort({ createdAt: -1 }).lean();
+      const data = await Model.find({}).sort({ createdAt: -1 }).lean();
+      console.log(`✅ Retrieved ${data.length} ${type} products`);
+      return data;
     } catch (err) {
-      console.error("GET ALL PRODUCTS ERROR:", err.message);
-      throw new Error("Failed to fetch products");
+      console.error("GET ALL PRODUCTS ERROR:", err.message, err.stack);
+      throw err; // Re-throw original error with full context
     }
   }
 

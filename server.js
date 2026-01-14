@@ -73,6 +73,24 @@ app.get("/", (req, res) => {
   });
 });
 
+/* ================= DEBUG ENDPOINT ================= */
+app.get("/debug", async (req, res) => {
+  try {
+    await connectDB();
+    res.json({
+      success: true,
+      message: "Database connected successfully",
+      mongodb_uri: process.env.MONGODB_URI ? "✅ Set" : "❌ Not set",
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Database connection failed",
+      error: err.message,
+    });
+  }
+});
+
 /* ================= API ROUTES ================= */
 app.use("/api/v1", productRoutes);
 
