@@ -51,6 +51,7 @@ app.use(express.urlencoded({ extended: true }));
 
 /* ================= FAVICON ================= */
 app.get("/favicon.ico", (req, res) => res.status(204).end());
+app.get("/favicon.png", (req, res) => res.status(204).end());
 
 /* ================= DATABASE ================= */
 (async () => {
