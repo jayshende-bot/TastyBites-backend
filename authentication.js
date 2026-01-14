@@ -3,14 +3,19 @@ const jwt = require("jsonwebtoken");
 const authMiddleware = (req, res, next) => {
 
   /* ================= PUBLIC ROUTES ================= */
-  const publicPrefixes = [
-    "/products", // allows /products/:type
-    "/register",
-    "/login",
+  // Check both full path and relative path patterns
+  const publicPatterns = [
+    "/products",      // /api/v1/products/:type
+    "/register",      // /api/v1/register
+    "/login",         // /api/v1/login
   ];
 
   // ✅ Allow public routes by prefix match
-  if (publicPrefixes.some((path) => req.path.startsWith(path))) {
+  const isPublic = publicPatterns.some((pattern) => {
+    return req.path.startsWith(pattern) || req.originalUrl.includes(pattern);
+  });
+
+  if (isPublic) {
     return next();
   }
 

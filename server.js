@@ -11,23 +11,40 @@ const app = express();
 /* ================= CORS ================= */
 const allowedOrigins = [
   "https://frontend-two-dusky-53.vercel.app",
+  "http://localhost:3000",
+  "http://localhost:5173",
 ];
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // Allow Postman / server-side requests
-      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-      // Reject unknown origins without throwing
-      return callback(null, false);
-    },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-  })
-);
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
 
-app.options("*", cors());
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      // Still allow the request but log it
+      console.warn(`CORS request from blocked origin: ${origin}`);
+      callback(null, true); // Allow for now to debug
+    }
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
+
+/* ================= ENSURE CORS ON ALL RESPONSES ================= */
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+    res.setHeader("Access-Control-Allow-Origin", origin || "*");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+  }
+  next();
+});
 
 /* ================= BODY PARSERS ================= */
 app.use(express.json());
