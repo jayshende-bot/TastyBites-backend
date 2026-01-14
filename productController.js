@@ -818,10 +818,13 @@ class ProductController {
 
       const { name, email, password, phone, address } = req.body;
 
+      console.log("[register] Request body:", { name: name ? "✓" : "✗", email: email ? "✓" : "✗", password: password ? "✓" : "✗" });
+
       if (!name || !email || !password) {
         return res.status(400).json({
           success: false,
           message: "Name, email and password are required",
+          received: { name: !!name, email: !!email, password: !!password },
         });
       }
 
@@ -871,10 +874,14 @@ class ProductController {
       await connectDB();
 
       const { email, password } = req.body;
+
+      console.log("[login] Request body:", { email: email ? "✓" : "✗", password: password ? "✓" : "✗" });
+
       if (!email || !password) {
         return res.status(400).json({
           success: false,
           message: "Email and password are required",
+          received: { email: !!email, password: !!password },
         });
       }
 
