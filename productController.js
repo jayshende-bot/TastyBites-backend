@@ -838,12 +838,25 @@ class ProductController {
       }
 
       const hashedPassword = await bcrypt.hash(password.trim(), 10);
+
+      // Handle address as object if provided
+      let addressObj = {};
+      if (address && typeof address === 'object') {
+        addressObj = {
+          house: address.house || "",
+          street: address.street || "",
+          city: address.city || "",
+          state: address.state || "",
+          pincode: address.pincode ? String(address.pincode) : "",
+        };
+      }
+
       const user = await User.create({
         name: name.trim(),
         email: cleanEmail,
         password: hashedPassword,
         phone: String(phone || "").trim(),
-        address: String(address || "").trim(),
+        address: addressObj,
       });
 
       const { password: pwd, ...safeUser } = user._doc;
