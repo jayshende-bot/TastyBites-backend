@@ -246,9 +246,7 @@
 
 
 
-
 const mongoose = require("mongoose");
-const connectDB = require("./db");
 const { Veg, Nonveg, Drink, Order } = require("./schema");
 
 /* ================= MAP TYPE → MODEL ================= */
@@ -274,7 +272,6 @@ class ProductService {
 
   static async getAll(type) {
     try {
-      await connectDB();
       const Model = this.getModel(type);
       return await Model.find({}).sort({ createdAt: -1 }).lean();
     } catch (err) {
@@ -285,9 +282,10 @@ class ProductService {
 
   static async saveOne(type, data) {
     try {
-      await connectDB();
       const Model = this.getModel(type);
-      if (!data || typeof data !== "object") throw new Error("Invalid product data");
+      if (!data || typeof data !== "object") {
+        throw new Error("Invalid product data");
+      }
       return await Model.create(data);
     } catch (err) {
       console.error("SAVE ONE PRODUCT ERROR:", err.message);
@@ -297,8 +295,9 @@ class ProductService {
 
   static async saveAll(type, dataArray) {
     try {
-      await connectDB();
-      if (!Array.isArray(dataArray) || dataArray.length === 0) throw new Error("Data must be a non-empty array");
+      if (!Array.isArray(dataArray) || dataArray.length === 0) {
+        throw new Error("Data must be a non-empty array");
+      }
       const Model = this.getModel(type);
       return await Model.insertMany(dataArray, { ordered: false });
     } catch (err) {
@@ -309,11 +308,14 @@ class ProductService {
 
   static async deleteOne(type, id) {
     try {
-      await connectDB();
-      if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Invalid Mongo ID");
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        throw new Error("Invalid Mongo ID");
+      }
       const Model = this.getModel(type);
       const deleted = await Model.findByIdAndDelete(id).lean();
-      if (!deleted) throw new Error("Item not found");
+      if (!deleted) {
+        throw new Error("Item not found");
+      }
       return deleted;
     } catch (err) {
       console.error("DELETE ONE PRODUCT ERROR:", err.message);
@@ -323,7 +325,6 @@ class ProductService {
 
   static async deleteAll(type) {
     try {
-      await connectDB();
       const Model = this.getModel(type);
       return await Model.deleteMany({});
     } catch (err) {
@@ -336,17 +337,33 @@ class ProductService {
 
   static async createOrder(data) {
     try {
-      await connectDB();
-      if (!data || typeof data !== "object") throw new Error("Invalid order data");
+      if (!data || typeof data !== "object") {
+        throw new Error("Invalid order data");
+      }
 
       const { email, items } = data;
-      if (!email || !Array.isArray(items) || items.length === 0) throw new Error("Email and items are required");
+      if (!email || !Array.isArray(items) || items.length === 0) {
+        throw new Error("Email and items are required");
+      }
 
-      const subtotal = items.reduce((sum, i) => sum + (Number(i.price) || 0) * (Number(i.quantity) || 1), 0);
+      const subtotal = items.reduce(
+        (sum, i) =>
+          sum +
+          (Number(i.price) || 0) *
+          (Number(i.quantity) || 1),
+        0
+      );
+
       const gst = +(subtotal * 0.05).toFixed(2);
       const finalTotal = +(subtotal + gst).toFixed(2);
 
-      return await Order.create({ email, items, subtotal, gst, finalTotal });
+      return await Order.create({
+        email,
+        items,
+        subtotal,
+        gst,
+        finalTotal,
+      });
     } catch (err) {
       console.error("CREATE ORDER ERROR:", err.message);
       throw new Error("Failed to create order");
@@ -355,7 +372,6 @@ class ProductService {
 
   static async getAllOrders() {
     try {
-      await connectDB();
       return await Order.find({}).sort({ createdAt: -1 }).lean();
     } catch (err) {
       console.error("GET ALL ORDERS ERROR:", err.message);
@@ -365,8 +381,9 @@ class ProductService {
 
   static async getUserOrders(email) {
     try {
-      await connectDB();
-      if (!email) throw new Error("Email is required");
+      if (!email) {
+        throw new Error("Email is required");
+      }
       return await Order.find({ email }).sort({ createdAt: -1 }).lean();
     } catch (err) {
       console.error("GET USER ORDERS ERROR:", err.message);
@@ -376,7 +393,6 @@ class ProductService {
 
   static async deleteAllOrders() {
     try {
-      await connectDB();
       return await Order.deleteMany({});
     } catch (err) {
       console.error("DELETE ALL ORDERS ERROR:", err.message);

@@ -44,11 +44,9 @@
 // router.delete("/:type", 
 // const express = require("express");
 
-
 const express = require("express");
 const router = express.Router();
 
-/* ✅ IMPORT NAME MATCHES USAGE */
 const ProductController = require("./productController");
 const authMiddleware = require("./authentication");
 
@@ -57,7 +55,17 @@ router.post("/register", ProductController.register);
 router.post("/login", ProductController.login);
 
 /* ========== PRODUCTS (PUBLIC) ========== */
-router.get("/products/:type", ProductController.getAll);
+// ✅ FIX: correct controller method
+router.get("/products/:type", async (req, res) => {
+  try {
+    const type = req.params.type;
+    const ProductService = require("./ProductService");
+    const data = await ProductService.getAll(type);
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
 
 /* ========== PROTECTED ROUTES ========== */
 router.use(authMiddleware);

@@ -798,7 +798,6 @@
 // }
 
 
-
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const connectDB = require("./db");
@@ -809,7 +808,6 @@ class ProductController {
 
   /* ================= AUTH ================= */
 
-  // ========== REGISTER ==========
   static async register(req, res) {
     try {
       await connectDB();
@@ -842,7 +840,11 @@ class ProductController {
       });
 
       const { password: pwd, ...safeUser } = user._doc;
-      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+      const token = jwt.sign(
+        { id: user._id },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
 
       return res.status(201).json({
         success: true,
@@ -853,11 +855,13 @@ class ProductController {
 
     } catch (err) {
       console.error("REGISTER ERROR:", err.message);
-      return res.status(500).json({ success: false, message: "Internal server error" });
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
     }
   }
 
-  // ========== LOGIN ==========
   static async login(req, res) {
     try {
       await connectDB();
@@ -873,16 +877,30 @@ class ProductController {
       const cleanEmail = email.trim().toLowerCase();
       const user = await User.findOne({ email: cleanEmail });
       if (!user) {
-        return res.status(404).json({ success: false, message: "User not registered" });
+        return res.status(404).json({
+          success: false,
+          message: "User not registered",
+        });
       }
 
-      const isMatch = await bcrypt.compare(password.trim(), user.password);
+      const isMatch = await bcrypt.compare(
+        password.trim(),
+        user.password
+      );
+
       if (!isMatch) {
-        return res.status(401).json({ success: false, message: "Invalid email or password" });
+        return res.status(401).json({
+          success: false,
+          message: "Invalid email or password",
+        });
       }
 
       const { password: pwd, ...safeUser } = user._doc;
-      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+      const token = jwt.sign(
+        { id: user._id },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
 
       return res.status(200).json({
         success: true,
@@ -893,44 +911,25 @@ class ProductController {
 
     } catch (err) {
       console.error("LOGIN ERROR:", err.message);
-      return res.status(500).json({ success: false, message: "Internal server error" });
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
     }
   }
 
   /* ================= PRODUCTS ================= */
-
-  static async getAll(req, res) {
-    try {
-      await connectDB();
-      const type = (req.params.type || "").trim().toLowerCase();
-
-      if (!type || !["veg", "nonveg", "drink"].includes(type)) {
-        return res.status(400).json({ success: false, message: "Invalid or missing product type" });
-      }
-
-      let data;
-      try {
-        data = await ProductService.getAll(type);
-      } catch (err) {
-        console.error("ProductService.getAll ERROR:", err.message);
-        return res.status(500).json({ success: false, message: "Failed to fetch products" });
-      }
-
-      return res.json({ success: true, data });
-
-    } catch (err) {
-      console.error("GET PRODUCTS ERROR:", err.message);
-      return res.status(500).json({ success: false, message: "Internal server error" });
-    }
-  }
 
   static async saveOne(req, res) {
     try {
       await connectDB();
       const type = (req.params.type || "").trim().toLowerCase();
 
-      if (!type || !["veg", "nonveg", "drink"].includes(type)) {
-        return res.status(400).json({ success: false, message: "Invalid product type" });
+      if (!["veg", "nonveg", "drink"].includes(type)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid product type",
+        });
       }
 
       const data = await ProductService.saveOne(type, req.body);
@@ -938,7 +937,10 @@ class ProductController {
 
     } catch (err) {
       console.error("SAVE ONE PRODUCT ERROR:", err.message);
-      return res.status(500).json({ success: false, message: "Failed to save product" });
+      return res.status(500).json({
+        success: false,
+        message: "Failed to save product",
+      });
     }
   }
 
@@ -947,8 +949,11 @@ class ProductController {
       await connectDB();
       const type = (req.params.type || "").trim().toLowerCase();
 
-      if (!type || !["veg", "nonveg", "drink"].includes(type)) {
-        return res.status(400).json({ success: false, message: "Invalid product type" });
+      if (!["veg", "nonveg", "drink"].includes(type)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid product type",
+        });
       }
 
       const data = await ProductService.saveAll(type, req.body);
@@ -956,7 +961,10 @@ class ProductController {
 
     } catch (err) {
       console.error("SAVE ALL PRODUCTS ERROR:", err.message);
-      return res.status(500).json({ success: false, message: "Failed to save products" });
+      return res.status(500).json({
+        success: false,
+        message: "Failed to save products",
+      });
     }
   }
 
@@ -965,16 +973,26 @@ class ProductController {
       await connectDB();
       const type = (req.params.type || "").trim().toLowerCase();
 
-      if (!type || !["veg", "nonveg", "drink"].includes(type)) {
-        return res.status(400).json({ success: false, message: "Invalid product type" });
+      if (!["veg", "nonveg", "drink"].includes(type)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid product type",
+        });
       }
 
-      const data = await ProductService.deleteOne(type, req.params.id);
+      const data = await ProductService.deleteOne(
+        type,
+        req.params.id
+      );
+
       return res.json({ success: true, data });
 
     } catch (err) {
       console.error("DELETE ONE PRODUCT ERROR:", err.message);
-      return res.status(500).json({ success: false, message: err.message });
+      return res.status(500).json({
+        success: false,
+        message: err.message,
+      });
     }
   }
 
@@ -983,16 +1001,25 @@ class ProductController {
       await connectDB();
       const type = (req.params.type || "").trim().toLowerCase();
 
-      if (!type || !["veg", "nonveg", "drink"].includes(type)) {
-        return res.status(400).json({ success: false, message: "Invalid product type" });
+      if (!["veg", "nonveg", "drink"].includes(type)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid product type",
+        });
       }
 
       const result = await ProductService.deleteAll(type);
-      return res.json({ success: true, deleted: result.deletedCount });
+      return res.json({
+        success: true,
+        deleted: result.deletedCount,
+      });
 
     } catch (err) {
       console.error("DELETE ALL PRODUCTS ERROR:", err.message);
-      return res.status(500).json({ success: false, message: err.message });
+      return res.status(500).json({
+        success: false,
+        message: err.message,
+      });
     }
   }
 
@@ -1001,8 +1028,12 @@ class ProductController {
   static async createOrder(req, res) {
     try {
       await connectDB();
+
       if (!req.body || Object.keys(req.body).length === 0) {
-        return res.status(400).json({ success: false, message: "Order data is missing" });
+        return res.status(400).json({
+          success: false,
+          message: "Order data is missing",
+        });
       }
 
       const order = await ProductService.createOrder(req.body);
@@ -1010,7 +1041,24 @@ class ProductController {
 
     } catch (err) {
       console.error("CREATE ORDER ERROR:", err.message);
-      return res.status(400).json({ success: false, message: "Invalid order data" });
+      return res.status(500).json({
+        success: false,
+        message: "Failed to create order",
+      });
+    }
+  }
+
+  static async getAllOrders(req, res) {
+    try {
+      await connectDB();
+      const orders = await ProductService.getAllOrders();
+      return res.json({ success: true, orders });
+    } catch (err) {
+      console.error("GET ALL ORDERS ERROR:", err.message);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch orders",
+      });
     }
   }
 
@@ -1018,8 +1066,12 @@ class ProductController {
     try {
       await connectDB();
       const email = req.params.email;
+
       if (!email) {
-        return res.status(400).json({ success: false, message: "Email is required" });
+        return res.status(400).json({
+          success: false,
+          message: "Email is required",
+        });
       }
 
       const orders = await ProductService.getUserOrders(email);
@@ -1027,7 +1079,10 @@ class ProductController {
 
     } catch (err) {
       console.error("GET USER ORDERS ERROR:", err.message);
-      return res.status(500).json({ success: false, message: "Failed to fetch user orders" });
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch user orders",
+      });
     }
   }
 
@@ -1036,10 +1091,12 @@ class ProductController {
       await connectDB();
       await ProductService.deleteAllOrders();
       return res.json({ success: true });
-
     } catch (err) {
       console.error("DELETE ALL ORDERS ERROR:", err.message);
-      return res.status(500).json({ success: false, message: "Failed to delete orders" });
+      return res.status(500).json({
+        success: false,
+        message: "Failed to delete orders",
+      });
     }
   }
 }
