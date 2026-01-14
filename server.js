@@ -34,7 +34,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
 
 /* ================= ENSURE CORS ON ALL RESPONSES ================= */
 app.use((req, res, next) => {
