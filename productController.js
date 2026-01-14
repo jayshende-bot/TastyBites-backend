@@ -842,8 +842,8 @@ class ProductController {
         name: name.trim(),
         email: cleanEmail,
         password: hashedPassword,
-        phone: phone?.trim() || "",
-        address: address?.trim() || "",
+        phone: String(phone || "").trim(),
+        address: String(address || "").trim(),
       });
 
       const { password: pwd, ...safeUser } = user._doc;
