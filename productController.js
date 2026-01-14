@@ -798,6 +798,10 @@
 // }
 
 
+
+
+
+
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const connectDB = require("./db");
@@ -919,6 +923,36 @@ class ProductController {
   }
 
   /* ================= PRODUCTS ================= */
+
+static async getAll(req, res) {
+  try {
+    await connectDB();
+
+    const type = (req.params.type || "").trim().toLowerCase();
+
+    if (!["veg", "nonveg", "drink"].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid product type",
+      });
+    }
+
+    const data = await ProductService.getAll(type);
+
+    return res.json({
+      success: true,
+      data,
+    });
+
+  } catch (err) {
+    console.error("GET PRODUCTS ERROR:", err.message);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch products",
+    });
+  }
+}
+
 
   static async saveOne(req, res) {
     try {

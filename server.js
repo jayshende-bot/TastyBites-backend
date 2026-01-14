@@ -47,6 +47,11 @@
 // 
 
 
+
+
+
+
+
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
@@ -56,34 +61,50 @@ const productRoutes = require("./productroutes");
 
 const app = express();
 
-/* ================= MIDDLEWARE ================= */
+/* ================= CORS (FIXED FOR FRONTEND) ================= */
+const allowedOrigins = [
+  "https://frontend-two-dusky-53.vercel.app",
+];
+
 app.use(
   cors({
-    origin: "*", // Allow all origins; change to your frontend URL in production if needed
+    origin: function (origin, callback) {
+      // Allow requests with no origin (Postman, server-side, etc.)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        return callback(new Error("Not allowed by CORS"));
+      }
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
   })
 );
 
 // Enable preflight for all routes
 app.options("*", cors());
 
-// Parse JSON & URL-encoded data
+/* ================= BODY PARSERS ================= */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+/* ================= FIX FAVICON NOISE ================= */
+app.get("/favicon.ico", (req, res) => res.status(204).end());
+
 /* ================= DATABASE ================= */
-// Safe DB connection: prevents crash if DB fails
 (async () => {
   try {
     await connectDB();
+    console.log("✅ MongoDB connected");
   } catch (err) {
     console.error("❌ MongoDB connection failed:", err.message);
-    // Do not crash server; routes can still respond with errors
   }
 })();
 
-/* ================= ROUTES ================= */
+/* ================= HEALTH CHECK ================= */
 app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
@@ -91,23 +112,32 @@ app.get("/", (req, res) => {
   });
 });
 
+/* ================= API ROUTES ================= */
 app.use("/api/v1", productRoutes);
 
-/* ================= ERROR HANDLER ================= */
-// Catch-all middleware to prevent unhandled errors from crashing server
-app.use((err, req, res, next) => {
-  console.error("Unhandled error:", err);
-  res.status(500).json({
+/* ================= 404 HANDLER ================= */
+app.use((req, res) => {
+  res.status(404).json({
     success: false,
-    message: "Internal server error (caught by fallback)",
+    message: "Route not found",
   });
 });
 
-/* ================= LOCAL DEV ONLY ================= */
+/* ================= GLOBAL ERROR HANDLER ================= */
+app.use((err, req, res, next) => {
+  console.error("🔥 ERROR:", err.message);
+
+  res.status(500).json({
+    success: false,
+    message: err.message || "Internal server error",
+  });
+});
+
+/* ================= LOCAL DEV ================= */
 if (process.env.NODE_ENV !== "production") {
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
-    console.log(`🚀 Server running locally on port ${PORT}`);
+    console.log(`🚀 Server running on port ${PORT}`);
   });
 }
 
